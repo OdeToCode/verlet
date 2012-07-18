@@ -4,24 +4,31 @@
     <script src="../jquery-1.7.2.js" type="text/javascript"></script>
     <link href="qunit.css" rel="stylesheet" type="text/css" />
     <script src="qunit.js" type="text/javascript"></script>
-
     <script src="../Point.js" type="text/javascript"></script>
     <script src="../Constraint.js" type="text/javascript"></script>
     <script src="../Particle.js" type="text/javascript"></script>
     <script src="../Rope.js" type="text/javascript"></script>
-    <script src="../verlet.js" type="text/javascript"></script>
-
+    
 </head>
 <body>
-    <h1 id="qunit-header">QUnit example</h1>
-    <h2 id="qunit-banner"></h2>
+    <h1 id="qunit-header">
+        QUnit example</h1>
+    <h2 id="qunit-banner">
+    </h2>
     <div id="qunit-testrunner-toolbar">
     </div>
-    <h2 id="qunit-userAgent"></h2>
-    <ol id="qunit-tests"></ol>
-    <div id="qunit-fixture"></div>
-
+    <h2 id="qunit-userAgent">
+    </h2>
+    <ol id="qunit-tests">
+    </ol>
+    <div id="qunit-fixture">
+        <canvas id="theCanvas"></canvas>
+    </div>
     <script>
+
+        var getCanvas = function () {
+            return document.getElementById("theCanvas");
+        };
 
         module("Point tests");
 
@@ -29,9 +36,89 @@
             var p1 = new Point(3, 5);
 
             ok(p1);
+            strictEqual(p1.x, 3);
+            strictEqual(p1.y, 5);
+        });
+
+        test("Can subtract point", function () {
+            var p1 = new Point(3, 5);
+            var p2 = new Point(3, 5);
+            var p3 = p1.subtract(p2);
+
+            strictEqual(p3.x, 0);
+            strictEqual(p3.y, 0);
+            strictEqual(p1.x, 3);
+            strictEqual(p1.y, 5);
+
+        });
+
+        test("Can add point", function () {
+            var p1 = new Point(3, 5);
+            var p2 = new Point(3, 5);
+            var p3 = p1.add(p2);
+
+            strictEqual(p3.x, 6);
+            strictEqual(p3.y, 10);
+            strictEqual(p1.x, 3);
+            strictEqual(p1.y, 5);
+        });
+
+        test("Can scale point", function () {
+            var p1 = new Point(3, 5);            
+            var p2 = p1.scale(3);
+
+            strictEqual(p2.x, 9);
+            strictEqual(p2.y, 15);
+            strictEqual(p1.x, 3);
+            strictEqual(p1.y, 5);
+        });
+
+        module("Particle tests");
+
+        test("Can verlet", function () {
+            var particle = new Particle(10, 10, getCanvas());
+
+            particle.applyForce(new Point(1, 1));
+
+            particle.verlet(1);
+
+            strictEqual(particle.currentPoint.x, 11);
+            strictEqual(particle.currentPoint.x, 11);
+        });
+
+        module("Rope tests");
+
+        test("Initializes particles", function () {
+            var rope = new Rope(getCanvas());
+
+            for (var i = 0; i < rope.particles.length; i++) {
+                ok(!isNaN(rope.particles[i].currentPoint.x));
+                ok(!isNaN(rope.particles[i].currentPoint.y));
+            }
+        });
+
+        test("Will set forcePoints", function () {
+            var rope = new Rope(getCanvas());
+            rope.accumulateForces();
+
+            for (var i = 0; i < rope.particles.length; i++) {
+                strictEqual(rope.particles[i].forcePoint.y, 0.9);
+            }
+        });
+
+        test("Satisfy constraints", function () {
+            var rope = new Rope(getCanvas());
+            
+            rope.accumulateForces();
+            rope.verlet();
+            rope.satisfyConstraints();
+
+            for (var i = 0; i < rope.particles.length; i++) {
+                ok(!isNaN(rope.particles[i].currentPoint.x));
+                ok(!isNaN(rope.particles[i].currentPoint.y));
+            }
         });
 
     </script>
-
 </body>
 </html>

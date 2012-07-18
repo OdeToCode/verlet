@@ -1,101 +1,77 @@
-﻿var Rope = function () {
-};
+﻿var Rope = function (canvas) {
 
+    var canvas = canvas;
+    var particles = [];
+    var offset = canvas.width / 2;
+    var gravityVector = new Point(0, 0.9);
+    var timeStep = 0.6;
+    var wind = false;
+    var windVector = new Point(0, 0);
+    var startElement = {
+        getX: function () { return offset; },
+        getY: function () { return 2; }
+    };
 
-Rope.prototype =
-{
-    onLoad: function (control, userContext, rootElement) {
-        // initialize timer and control
-        this.control = control;
-        this.timer = rootElement.findName('timer');
-        this.timer.addEventListener("completed", Silverlight.createDelegate(this, this.onTick));
+    var onTick = function () {
+        accumulateForces();
+        verlet();
+        satisfyConstraints();
+        updateAll();
+    };
 
-        // initialize particles
-        this.particles = new Array();
-        var offset = this.control.width / 2;
-        for (var i = 0; i < 12; i++) {
-            this.particles[i] = new Particle(control, rootElement, i * 32 + offset, 2);
-            if (i == 0) {
-                // first particle is constained to its starting position
-                var startElement =
-                {
-                    left: function () { return offset; },
-                    top: function () { return 2; }
-                }
-                this.particles[i].constraints.push(new Constraint(startElement, 4));
-            }
-            else {   // all other particles constained to the previous particle
-                this.particles[i].constraints.push(new Constraint(this.particles[i - 1], 30));
-            }
-
+    var toggleWind = function () {
+        wind = !wind
+        if (wind) {
+            windVector.x = 1.2;
+            windVector.y = 0;
+        } else {
+            windVector.x = 0;
+            windVector.y = 0;
         }
+    };
 
-        // initialize forces and time (its all relative)
-        this.gravityVector = new Point(0, 0.9);
-        this.timeStep = 0.25 // lower values to slow down
-        this.canvas = rootElement;
-        this.wind = false;
-        this.windVector = new Point(0, 0);
+    var accumulateForces = function () {
+        
+        for (var i = 0; i < particles.length; i++) {
+            var forcePoint = new Point(0, 0);
+            forcePoint.add(gravityVector);
+            forcePoint.add(windVector);                
+            particles[i].applyForce(forcePoint);
+        }        
+    };
 
-        // start the show
-        this.timer.begin();
-    },
-
-    onTick: function (sender, eventArgs) {
-        // the main loop - verlet algorithm
-        // 
-        this.accumulateForces();
-        this.verlet();
-        this.satisfyConstraints();
-        this.updateAll();
-        this.timer.begin();
-    },
-
-    toggleWind: function () {
-        this.wind = !this.wind
-        // add a little horizontal disturbance...
-        if (this.wind) {
-            this.windVector.x = 1.2; // = Math.random();
-            this.windVector.y = 0;
+    var verlet = function () {
+        for (var i = 0; i < particles.length; i++) {
+            particles[i].verlet(timeStep);
         }
-    },
+    };
 
-    accumulateForces: function () {
-        for (var i = 0; i < this.particles.length; i++) {
-            this.particles[i].forcePoint.init();
-            this.particles[i].forcePoint.add(this.gravityVector);
-            if (this.wind) {
-                this.particles[i].forcePoint.add(this.windVector);
-            }
-        }
-    },
-
-    verlet: function () {
-        for (var i = 0; i < this.particles.length; i++) {
-            this.particles[i].verlet(this.timeStep);
-        }
-    },
-
-    satisfyConstraints: function () {
-        // hack: assume all particles of same size
-        var maxy = this.control.height - this.particles[0].height;
-        var maxx = this.control.width - this.particles[0].width;
-
-        // one of the keys to verlet is picking the right number 
-        // of iterations for the scene. not sure what works best
-        // for this, but < 15 seems pretty unstable...
+    var satisfyConstraints = function () {
         for (var iterations = 0; iterations < 17; iterations++) {
-            for (var i = 0; i < this.particles.length; i++) {
-                this.particles[i].satisfyConstraints();
-                this.particles[i].currentPoint.min(0, 0);
-                this.particles[i].currentPoint.max(maxx, maxy);
+            for (var i = 0; i < particles.length; i++) {
+                particles[i].satisfyConstraints();
             }
         }
-    },
+    };
 
-    updateAll: function () {
-        for (var i = 0; i < this.particles.length; i++) {
-            this.particles[i].update();
+    var updateAll = function () {
+        for (var i = 0; i < particles.length; i++) {
+            particles[i].update();
         }
     }
+
+    for (var i = 0; i < 60; i++) {
+        particles[i] = Particle(canvas, i * 8 + offset, 2);
+        if (i == 0) {
+            particles[i].addConstraint(new Constraint(startElement, 4));
+        }
+        else {
+            particles[i].addConstraint(new Constraint(particles[i - 1], 8));
+        }
+    }
+
+    return {
+        onTick: onTick,
+        toggleWind: toggleWind
+    };
 }

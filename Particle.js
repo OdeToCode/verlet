@@ -1,63 +1,89 @@
-﻿var Particle = function (x, y, canvas) {
-    this.currentPoint = new Point(x, y);
-    this.lastPoint = new Point(x, y);
-    this.forcePoint = new Point(0, 0);
-    this.tempPoint = new Point(0, 0);
-    this.calcPoint = new Point(0, 0);
-    this.canvas = canvas;
-    this.constraints = [];
-    this.center = canvas.width / 2;
-    this.width = 30;
-    this.height = 30;
-}
+﻿function Particle(canvas, left, top) {
+    
+    var currentPoint = new Point(left, top);
+    var lastPoint = new Point(left, top);
+    var forcePoint = new Point(0, 0);    
 
-Particle.prototype =
-{
-    x: function () {
-        return this.currentPoint.x;
-    },
+    var constraints = [];
+    var context = canvas.getContext("2d");    
 
-    y: function () {
-        return this.currentPoint.y;
-    },
+    var getX = function () {
+        return currentPoint.x;
+    };
 
-    update: function () {
-        ctx.fillRect(this.x(), this.y(), 0, this.width, this.height);
-    },
+    var getY = function () {
+        return currentPoint.y;
+    };
 
-    verlet: function (timeStep) {
-        this.tempPoint.copy(this.currentPoint);
-        this.calcPoint.init();
-        this.calcPoint.add(this.currentPoint);
-        this.calcPoint.subtract(this.lastPoint);
-        this.forcePoint.scale(timeStep * timeStep);
-        this.calcPoint.add(this.forcePoint);
-        this.currentPoint.add(this.calcPoint)
-        this.lastPoint.copy(this.tempPoint);
-    },
+    var update = function () {
+        var ballSize = 30;
+        var gradient = context.createRadialGradient(currentPoint.x + ballSize / 2,
+                                                    currentPoint.y + ballSize / 2,
+                                                    2,
+                                                    currentPoint.x + ballSize / 2,
+                                                    currentPoint.y + ballSize / 2,
+                                                    ballSize * 0.20);
+        gradient.addColorStop(0, "rgba(204,0,0,1)");
+        gradient.addColorStop(1, "rgba(0,0,0,0)");
+        context.fillStyle = gradient;
+        context.fillRect(currentPoint.x, currentPoint.y, ballSize, ballSize);
+    };
 
-    satisfyConstraints: function () 
-    {
-        for (var i = 0; i < this.constraints.length; i++) {
-            var dx = this.currentPoint.x - this.constraints[i].element.left();
-            var dy = this.currentPoint.y - this.constraints[i].element.top();
+    var verlet = function (timeStep) {
+        
+        var calcPoint = new Point(0, 0);
+        var tempPoint = new Point(0, 0);    
+
+        tempPoint.copy(currentPoint);        
+        calcPoint.add(currentPoint);
+        calcPoint.subtract(lastPoint);
+        forcePoint.scale(timeStep * timeStep);
+        calcPoint.add(forcePoint);
+        currentPoint.add(calcPoint)
+
+        lastPoint.copy(tempPoint);
+    };
+
+    var addConstraint = function (constraint) {
+        constraints.push(constraint);
+    };
+
+    var applyForce = function (force) {
+        forcePoint = force;
+    };
+
+    var applyDelta = function (dpoint) {
+        currentPoint.add(dpoint);
+    };
+
+    var satisfyConstraints = function () {
+        for (var i = 0; i < constraints.length; i++) {
+            var dx = currentPoint.x - constraints[i].element.getX();
+            var dy = currentPoint.y - constraints[i].element.getY();
             var d1 = Math.sqrt((dx * dx) + (dy * dy));
-            var d2 = 0;
+            var d2 = 0
             if (d1 != 0) {
-                d2 = 0.5 * (d1 - this.constraints[i].distance) / d1;
+                d2 = 0.5 * (d1 - constraints[i].distance) / d1;
             }
-            dx = dx * d2;
-            dy = dy * d2;
-            this.currentPoint.x -= dx;
-            this.currentPoint.y -= dy;
-            if (this.constraints[i].element.currentPoint != null) {
-                this.constraints[i].element.currentPoint.x += dx;
-                this.constraints[i].element.currentPoint.y += dy;
+            var dpoint = new Point(dx * d2, dy * d2);
+            currentPoint.subtract(dpoint);
+            if (constraints[i].element.applyDelta) {
+                constraints[i].element.applyDelta(dpoint);
             }
             else {
-                this.currentPoint.x -= dx;
-                this.currentPoint.y -= dy;
+                currentPoint.subtract(dpoint);
             }
         }
-    }
-};
+    };
+
+    return {
+        getX: getX,
+        getY: getY,
+        update: update,
+        verlet: verlet,
+        addConstraint: addConstraint,
+        applyForce: applyForce,
+        satisfyConstraints: satisfyConstraints,
+        applyDelta: applyDelta
+    };
+}
