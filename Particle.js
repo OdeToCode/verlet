@@ -15,20 +15,6 @@
         return currentPoint.y;
     };
 
-    var update = function () {
-        var ballSize = 30;
-        var gradient = context.createRadialGradient(currentPoint.x + ballSize / 2,
-                                                    currentPoint.y + ballSize / 2,
-                                                    2,
-                                                    currentPoint.x + ballSize / 2,
-                                                    currentPoint.y + ballSize / 2,
-                                                    ballSize * 0.20);
-        gradient.addColorStop(0, "rgba(204,0,0,1)");
-        gradient.addColorStop(1, "rgba(0,0,0,0)");
-        context.fillStyle = gradient;
-        context.fillRect(currentPoint.x, currentPoint.y, ballSize, ballSize);
-    };
-
     var verlet = function (timeStep) {
         
         var calcPoint = new Point(0, 0);
@@ -74,12 +60,15 @@
                 currentPoint.subtract(dpoint);
             }
         }
+        if (currentPoint.x < 2) currentPoint.x = 2;
+        if (currentPoint.x > canvas.width  -20) currentPoint.x = canvas.width - 20;
+        if (currentPoint.y < 2) currentPoint.y = 2;
+        if (currentPoint.y > canvas.height - 2) currentPoint.y = canvas.height - 2;
     };
 
     return {
         getX: getX,
         getY: getY,
-        update: update,
         verlet: verlet,
         addConstraint: addConstraint,
         applyForce: applyForce,
